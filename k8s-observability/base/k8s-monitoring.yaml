@@ -65,7 +65,7 @@ spec:
         
         alloy:
           controller:
-            replicas: 2
+            replicas: 1 
             tolerations: []
         
         applicationObservability:
