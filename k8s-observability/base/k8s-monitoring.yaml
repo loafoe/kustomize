@@ -1,0 +1,117 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: k8s-monitoring
+  namespace: k8s-observability
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+spec:
+  project: k8s-observability
+  source:
+    chart: k8s-monitoring
+    repoURL: https://grafana.github.io/helm-charts
+    targetRevision: 1.6.0
+    helm:
+      releaseName: k8s-monitoring
+      valuesObject:
+        cluster:
+          name: ${CLUSTER_NAME}
+        
+        externalServices:
+          prometheus:
+            protocol: "otlphttp"
+            writeEndpoint: "/"
+            host: ${ARGOCD_ENV_host}
+            authMode: basic
+            basicAuth:
+              username: "otlp"
+              passwordKey: "key"
+            secret:
+              create: false
+              name: k8s-observability
+              namespace: k8s-observability
+          loki:
+            host: ${ARGOCD_ENV_host}
+            writeEndpoint: /loki/api/v1/push
+            authMode: basic
+            basicAuth:
+              username: "admin"
+              passwordKey: "key"
+            secret:
+              create: false
+              name: k8s-observability
+              namespace: k8s-observability
+        
+        prometheus-operator-crds:
+          enabled: false
+        
+        opencost:
+          enabled: false
+          opencost:
+            tolerations: []
+        
+        configValidator:
+          tolerations: []
+        
+        kube-state-metrics:
+          enabled: false
+          tolerations: []
+        
+        metrics:
+          kube-state-metrics:
+            enabled: false
+        
+        alloy:
+          controller:
+            replicas: 2
+            tolerations: []
+        
+        applicationObservability:
+          enabled: true
+          receivers:
+            grpc:
+              enabled: true
+        
+        prometheusOperatorObjects:
+          enabled: true
+        
+        podLogs:
+          enabled: true
+        
+        alloy-metrics:
+          enabled: true
+        
+        alloy-logs:
+          enabled: true
+          controller:
+            affinity:
+              nodeAffinity:
+                requiredDuringSchedulingIgnoredDuringExecution:
+                  nodeSelectorTerms:
+                    - matchExpressions:
+                        - key: eks.amazonaws.com/compute-type
+                          operator: NotIn
+                          values:
+                            - fargate
+        
+        
+        alloy-receiver:
+          enabled: true
+          alloy:
+            extraPorts:
+              - name: otlp-grpc
+                port: 4317
+                targetPort: 4317
+                protocol: TCP
+        
+        prometheus-node-exporter:
+            enabled: false
+  destination:
+    server: "https://kubernetes.default.svc"
+    namespace: k8s-observability
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
