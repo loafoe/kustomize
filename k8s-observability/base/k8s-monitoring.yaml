@@ -43,6 +43,18 @@ spec:
               create: false
               name: k8s-observability
               namespace: k8s-observability
+          tempo:
+            host: ${ARGOCD_ENV_host}
+            writeEndpoint: "/v1/traces"
+            protocol: "otlphttp"
+            authMode: basic
+            basicAuth:
+              username: "otlp"
+              passwordKey: "key"
+            secret:
+              create: false
+              name: k8s-observability
+              namespace: k8s-observability
         
         prometheus-operator-crds:
           enabled: false
@@ -79,7 +91,9 @@ spec:
         
         podLogs:
           enabled: true
-        
+
+        traces:
+          enabled: true
         alloy-metrics:
           enabled: true
         
