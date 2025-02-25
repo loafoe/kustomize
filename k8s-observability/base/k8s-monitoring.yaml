@@ -54,6 +54,10 @@ spec:
 
         traces:
           enabled: true
+
+        autoInstrumentation:
+          enabled: true
+
         alloy-metrics:
           enabled: true
           liveDebugging:
