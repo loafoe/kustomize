@@ -12,79 +12,39 @@ spec:
   source:
     chart: k8s-monitoring
     repoURL: https://grafana.github.io/helm-charts
-    targetRevision: 1.6.0
+    targetRevision: 2.0.13
     helm:
       releaseName: k8s-monitoring
       valuesObject:
         cluster:
           name: ${CLUSTER_NAME}
         
-        externalServices:
-          prometheus:
-            protocol: "otlphttp"
-            writeEndpoint: "/"
-            host: ${ARGOCD_ENV_host}
-            authMode: basic
-            basicAuth:
-              username: "otlp"
-              passwordKey: "key"
+        destinations:
+          - name: oltpGateway
+            protocol: http
+            type: otlp
+            url: https://${ARGOCD_ENV_host}
+            auth:
+              type: basic
+              usernameKey: "username"
+              passwordKey: "apiKey"
             secret:
               create: false
               name: k8s-observability
               namespace: k8s-observability
-          loki:
-            host: ${ARGOCD_ENV_host}
-            writeEndpoint: /loki/api/v1/push
-            authMode: basic
-            basicAuth:
-              username: "admin"
-              passwordKey: "key"
-            secret:
-              create: false
-              name: k8s-observability
-              namespace: k8s-observability
-          tempo:
-            host: ${ARGOCD_ENV_host}
-            writeEndpoint: "/v1/traces"
-            protocol: "otlphttp"
-            authMode: basic
-            basicAuth:
-              username: "otlp"
-              passwordKey: "key"
-            secret:
-              create: false
-              name: k8s-observability
-              namespace: k8s-observability
-        
-        prometheus-operator-crds:
-          enabled: false
-        
-        opencost:
-          enabled: false
-          opencost:
-            tolerations: []
-        
-        configValidator:
-          tolerations: []
-        
-        kube-state-metrics:
-          enabled: false
-          tolerations: []
-        
-        metrics:
-          kube-state-metrics:
-            enabled: false
-        
-        alloy:
-          controller:
-            replicas: 1 
-            tolerations: []
-        
+            logs: { enabled: true }
+            metrics: { enabled: true }
+            traces: { enabled: true }
+
         applicationObservability:
           enabled: true
           receivers:
-            grpc:
+            otlp:
               enabled: true
+              http:
+                enabled: false
+              grpc:
+                enabled: true
         
         prometheusOperatorObjects:
           enabled: true
@@ -96,9 +56,17 @@ spec:
           enabled: true
         alloy-metrics:
           enabled: true
+          liveDebugging:
+            enabled: true
+          alloy:
+            stabilityLevel: experimental
         
         alloy-logs:
           enabled: true
+          liveDebugging:
+            enabled: true
+          alloy:
+            stabilityLevel: experimental
           controller:
             affinity:
               nodeAffinity:
@@ -109,8 +77,7 @@ spec:
                           operator: NotIn
                           values:
                             - fargate
-        
-        
+
         alloy-receiver:
           enabled: true
           alloy:
@@ -119,9 +86,7 @@ spec:
                 port: 4317
                 targetPort: 4317
                 protocol: TCP
-        
-        prometheus-node-exporter:
-            enabled: false
+
   destination:
     server: "https://kubernetes.default.svc"
     namespace: k8s-observability
